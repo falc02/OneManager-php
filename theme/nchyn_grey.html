@@ -23,8 +23,8 @@
     <meta name="description" content="<!--Description-->">
     <link rel="icon" href="<!--base_path-->favicon.ico" type="image/x-icon" />
     <link rel="shortcut icon" href="<!--base_path-->favicon.ico" type="image/x-icon" />
-    <link href="//cdn.bootcdn.net/ajax/libs/twitter-bootstrap/4.5.0/css/bootstrap.min.css" rel="stylesheet">
-    <script src="//cdn.bootcdn.net/ajax/libs/jquery/2.0.2/jquery.min.js"></script>
+    <link href="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/4.5.0/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.bootcdn.net/ajax/libs/jquery/2.0.2/jquery.min.js"></script>
 
     <style>
     a {
@@ -676,11 +676,11 @@ return false;
 </body>
 
 <!--ListStart-->
-<!--MdRequireStart--><link rel="stylesheet" href="//unpkg.zhimg.com/github-markdown-css@3.0.1/github-markdown.css">
-<script type="text/javascript" src="//unpkg.zhimg.com/marked@0.6.2/marked.min.js"></script><!--MdRequireEnd-->
-<!--GuestUploadStart--><script type="text/javascript" src="//cdn.bootcss.com/spark-md5/3.0.0/spark-md5.min.js"></script><!--GuestUploadEnd-->
-<!--AliyundriveUploadJsStart--><script src="//cdn.bootcdn.net/ajax/libs/js-sha1/0.6.0/sha1.min.js"></script><!--AliyundriveUploadJsEnd-->
-<!--IsFileStart--><!--IspdfFileStart--><script src="//cdn.bootcss.com/pdf.js/2.3.200/pdf.min.js"></script><!--IspdfFileEnd--><!--IsFileEnd-->
+<!--MdRequireStart--><link rel="stylesheet" href="https://unpkg.zhimg.com/github-markdown-css@3.0.1/github-markdown.css">
+<script type="text/javascript" src="https://unpkg.zhimg.com/marked@0.6.2/marked.min.js"></script><!--MdRequireEnd-->
+<!--GuestUploadStart--><script type="text/javascript" src="https://cdn.jsdelivr.net/gh/satazor/js-spark-md5@master/spark-md5.min.js"></script><!--GuestUploadEnd-->
+<!--AliyundriveUploadJsStart--><script src="https://cdn.jsdelivr.net/gh/emn178/js-sha1@master/build/sha1.min.js"></script><!--AliyundriveUploadJsEnd-->
+<!--IsFileStart--><!--IspdfFileStart--><script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@2.7.570/build/pdf.min.js"></script><!--IspdfFileEnd--><!--IsFileEnd-->
 <!--ListEnd-->
 <script type="text/javascript">
     function changelanguage(str)
@@ -799,10 +799,10 @@ return false;
     addVideos(['<!--FileEncodeUrl-->']);
 <!--IsvideoFileEnd-->
 <!--IspdfFileStart-->
-    pdfjsLib.GlobalWorkerOptions.workerSrc = '//cdn.bootcss.com/pdf.js/2.3.200/pdf.worker.min.js';
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@2.7.570/build/pdf.worker.min.js';
     var loadingTask = pdfjsLib.getDocument({
         url: '<!--FileDownUrl-->',
-        cMapUrl: "//cdn.jsdelivr.net/npm/pdfjs-dist@2.2.228/cmaps/",
+        cMapUrl: "https://cdn.jsdelivr.net/npm/pdfjs-dist@2.7.570/cmaps/",
         cMapPacked: true,
         rangeChunkSize: 65535
     });
@@ -1747,9 +1747,9 @@ return false;
     document.getElementById('password1').focus();
 <!--EncryptedEnd-->
 </script>
-<script src="//unpkg.zhimg.com/ionicons@4.4.4/dist/ionicons.js"></script>
-<script src="//cdn.bootcdn.net/ajax/libs/jquery/3.3.1/jquery.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
-<script src="//cdn.bootcdn.net/ajax/libs/popper.js/1.14.3/umd/popper.min.js" integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49" crossorigin="anonymous"></script>
-<script src="//cdn.bootcdn.net/ajax/libs/twitter-bootstrap/4.1.1/js/bootstrap.min.js" integrity="sha384-smHYKdLADwkXOn1EmN1qk/HfnUcbVRZyYmZ4qpPea6sjB/pTJ0euyQp0Mk8ck+5T" crossorigin="anonymous"></script>
+<script src="https://unpkg.zhimg.com/ionicons@4.4.4/dist/ionicons.js"></script>
+<script src="https://cdn.bootcdn.net/ajax/libs/jquery/3.3.1/jquery.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
+<script src="https://cdn.bootcdn.net/ajax/libs/popper.js/1.14.3/umd/popper.min.js" integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49" crossorigin="anonymous"></script>
+<script src="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/4.1.1/js/bootstrap.min.js" integrity="sha384-smHYKdLADwkXOn1EmN1qk/HfnUcbVRZyYmZ4qpPea6sjB/pTJ0euyQp0Mk8ck+5T" crossorigin="anonymous"></script>
 <!--customScript-->
 </html>
