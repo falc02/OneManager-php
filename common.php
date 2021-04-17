@@ -918,7 +918,7 @@ function adminform($name = '', $pass = '', $path = '')
         }
     }
 </script>
-<script src="https://cdn.bootcss.com/js-sha1/0.6.0/sha1.min.js"></script>';
+<script src="https://cdn.jsdelivr.net/gh/emn178/js-sha1@master/build/sha1.min.js"></script>';
     $html .= '</html>';
     return output($html, $statusCode);
 }
@@ -1404,7 +1404,7 @@ function EnvOpt($needUpdate = 0)
 <br><br>';
         if (count($disktags)>1) {
             $frame .= '
-<script src="//cdn.bootcss.com/Sortable/1.8.3/Sortable.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/SortableJS/Sortable@master/Sortable.js"></script>
 <style>
     .sortable-ghost {
         opacity: 0.4;
@@ -1550,7 +1550,7 @@ function EnvOpt($needUpdate = 0)
             $frame .= getconstStr('NotNeedUpdate');
         }*/
         $frame .= '<br>
-<script src="https://cdn.bootcss.com/js-sha1/0.6.0/sha1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/emn178/js-sha1@master/build/sha1.min.js"></script>
 <table>
     <form id="change_pass" name="change_pass" action="" method="POST" onsubmit="return changePassword(this);">
     <tr>
