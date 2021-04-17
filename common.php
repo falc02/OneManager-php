@@ -1496,14 +1496,14 @@ function EnvOpt($needUpdate = 0)
                 $canOneKeyUpate = 1;
             }
         }
-        $frame .= '<a href="https://github.com/qkqpttgf/OneManager-php" target="_blank">Github</a>';
+        $frame .= '<a href="https://github.com/falc02/OneManager-php" target="_blank">Github</a>';
         if (!$canOneKeyUpate) {
             $frame .= '
 ' . getconstStr('CannotOneKeyUpate') . '<br>';
         } else {
             $frame .= '
 <form name="updateform" action="" method="post">
-    <input type="text" name="auth" size="6" placeholder="auth" value="qkqpttgf">
+    <input type="text" name="auth" size="6" placeholder="auth" value="falc02">
     <input type="text" name="project" size="12" placeholder="project" value="OneManager-php">
     <button name="QueryBranchs" onclick="querybranchs();return false;">' . getconstStr('QueryBranchs') . '</button>
     <select name="branch">
@@ -1516,7 +1516,7 @@ function EnvOpt($needUpdate = 0)
     {
         var xhr = new XMLHttpRequest();
         xhr.open("GET", "https://api.github.com/repos/"+document.updateform.auth.value+"/"+document.updateform.project.value+"/branches");
-        //xhr.setRequestHeader("User-Agent","qkqpttgf/OneManager");
+        //xhr.setRequestHeader("User-Agent","falc02/OneManager");
         xhr.onload = function(e){
             console.log(xhr.responseText+","+xhr.status);
             if (xhr.status==200) {
