@@ -37,6 +37,7 @@ $EnvConfigs = [
     'theme'             => 0b010,
     'dontBasicAuth'     => 0b010,
     'referrer'          => 0b011,
+    'forceHttps'        => 0b010,
 
     'Driver'            => 0b100,
     'client_id'         => 0b100,
@@ -133,6 +134,19 @@ function main($path)
     if (strpos(__DIR__, ':')) $slash = '\\';
     $_SERVER['php_starttime'] = microtime(true);
     $path = path_format($path);
+    $_SERVER['PHP_SELF'] = path_format($_SERVER['base_path'] . $path);
+    if (getConfig('forceHttps')&&$_SERVER['REQUEST_SCHEME']=='http') {
+        if ($_GET) {
+            $tmp = '';
+            foreach ($_GET as $k => $v) {
+                if ($v===true) $tmp .= '&' . $k;
+                else $tmp .= '&' . $k . '=' . $v;
+            }
+            $tmp = substr($tmp, 1);
+            if ($tmp!='') $param = '?' . $tmp;
+        }
+        return output('visit via https.', 302, [ 'Location' => 'https://' . $_SERVER['HTTP_HOST'] . $_SERVER['PHP_SELF'] . $param ]);
+    }
     if (in_array($_SERVER['firstacceptlanguage'], array_keys($constStr['languages']))) {
         $constStr['language'] = $_SERVER['firstacceptlanguage'];
     } else {
@@ -150,8 +164,6 @@ function main($path)
     $_SERVER['timezone'] = getConfig('timezone');
     if (isset($_COOKIE['timezone'])&&$_COOKIE['timezone']!='') $_SERVER['timezone'] = $_COOKIE['timezone'];
     if ($_SERVER['timezone']=='') $_SERVER['timezone'] = 0;
-    $_SERVER['PHP_SELF'] = path_format($_SERVER['base_path'] . $path);
-    
 
     if (getConfig('admin')=='') return install();
     if (getConfig('adminloginpage')=='') {
@@ -304,12 +316,13 @@ function main($path)
                 if ($thumb_url!='') {
                     if ($_GET['location']) {
                         $url = $thumb_url;
+                        $header['Location'] = $url;
                         $domainforproxy = '';
                         $domainforproxy = getConfig('domainforproxy', $_SERVER['disktag']);
                         if ($domainforproxy!='') {
-                            $url = proxy_replace_domain($url, $domainforproxy);
+                            $url = proxy_replace_domain($url, $domainforproxy, $header);
                         }
-                        return output('', 302, [ 'Location' => $url ]);
+                        return output('', 302, $header);
                     } else return output($thumb_url);
                 }
                 return output('', 404);
@@ -350,12 +363,13 @@ function main($path)
             if (count($tmp)>0) {
                 $url = $tmp[rand(0, count($tmp)-1)];
                 if (isset($_GET['url'])) return output($url, 200);
+                $header['Location'] = $url;
                 $domainforproxy = '';
                 $domainforproxy = getConfig('domainforproxy', $_SERVER['disktag']);
                 if ($domainforproxy!='') {
-                    $url = proxy_replace_domain($url, $domainforproxy);
+                    $url = proxy_replace_domain($url, $domainforproxy, $header);
                 }
-                return output('', 302, [ 'Location' => $url ]);
+                return output('', 302, $header);
             } else return output('No ' . $_GET['random'] . 'file', 404);
         } else return output('Hidden', 401);
     }
@@ -363,15 +377,15 @@ function main($path)
     if ($files['type']=='file' && !isset($_GET['preview'])) {
         if ( $_SERVER['ishidden']<4 || (!!getConfig('downloadencrypt', $_SERVER['disktag'])&&$files['name']!=getConfig('passfile')) ) {
             $url = $files['url'];
-            $domainforproxy = '';
-            $domainforproxy = getConfig('domainforproxy', $_SERVER['disktag']);
-            if ($domainforproxy!='') {
-                $url = proxy_replace_domain($url, $domainforproxy);
-            }
             if ( strtolower(splitlast($files['name'], '.')[1])=='html' ) return output($files['content']['body'], $files['content']['stat']);
             else {
                 if ($_SERVER['HTTP_RANGE']!='') $header['Range'] = $_SERVER['HTTP_RANGE'];
                 $header['Location'] = $url;
+                $domainforproxy = '';
+                $domainforproxy = getConfig('domainforproxy', $_SERVER['disktag']);
+                if ($domainforproxy!='') {
+                    $url = proxy_replace_domain($url, $domainforproxy, $header);
+                }
                 return output('', 302, $header);
             }
         }
@@ -454,6 +468,7 @@ function compareadminmd5($admincookie, $name, $pass)
     if (md5($name . ':' . md5($pass) . '@' . $c_time) == $c_md5) return true;
     else return false;
 }
+
 function compareadminsha1($adminsha1, $timestamp, $pass)
 {
     if (!is_numeric($timestamp)) return 'Timestamp not Number';
@@ -465,8 +480,9 @@ function compareadminsha1($adminsha1, $timestamp, $pass)
     else return 'Error password';
 }
 
-function proxy_replace_domain($url, $domainforproxy)
+function proxy_replace_domain($url, $domainforproxy, &$header)
 {
+    global $drive;
     $tmp = splitfirst($url, '//');
     $http = $tmp[0];
     $tmp = splitfirst($tmp[1], '/');
@@ -475,10 +491,14 @@ function proxy_replace_domain($url, $domainforproxy)
     if (substr($domainforproxy, 0, 7)=='http://' || substr($domainforproxy, 0, 8)=='https://') $aim = $domainforproxy;
     else $aim = $http . '//' . $domainforproxy;
     if (substr($aim, -1)=='/') $aim = substr($aim, 0, -1);
+    //$header['Location'] = $aim . '/' . $uri;
+    //return $aim . '/' . $uri;
     if (strpos($url, '?')>0) $sp = '&';
     else $sp = '?';
+    $aim .= '/' . $uri . $sp . 'Origindomain=' . $domain;
+    if ($drive->show_base_class()=='Aliyundrive') $aim .= '&Aliyundrive';
+    $header['Location'] = $aim;
     return $aim . '/' . $uri . $sp . 'Origindomain=' . $domain;
-    //$url = str_replace($tmp, $domainforproxy, $url).'&Origindomain='.$tmp;
 }
 
 function isHideFile($name)
@@ -489,6 +509,7 @@ function isHideFile($name)
         'head.omf',
         'foot.omf',
         'favicon.ico',
+        'robots.txt',
         'index.html',
     ];
 
@@ -717,7 +738,7 @@ function comppass($pass)
 function encode_str_replace($str)
 {
     $str = str_replace('%','%25',$str);
-    $str = str_replace('&','&amp;',$str);
+    if (strpos($str, '&amp;')) $str = str_replace('&amp;', '&amp;amp;', $str);
     $str = str_replace('+','%2B',$str);
     $str = str_replace('#','%23',$str);
     return $str;
@@ -823,8 +844,9 @@ function needUpdate()
 function output($body, $statusCode = 200, $headers = ['Content-Type' => 'text/html'], $isBase64Encoded = false)
 {
     if (isset($_SERVER['Set-Cookie'])) $headers['Set-Cookie'] = $_SERVER['Set-Cookie'];
-    $headers['Referrer-Policy'] = 'no-referrer'; //$headers['Referrer-Policy'] = 'same-origin';
-    $headers['X-Frame-Options'] = 'sameorigin';
+    if (baseclassofdrive()=='Aliyundrive') $headers['Referrer-Policy'] = 'no-referrer';
+    //$headers['Referrer-Policy'] = 'same-origin';
+    //$headers['X-Frame-Options'] = 'sameorigin';
     return [
         'isBase64Encoded' => $isBase64Encoded,
         'statusCode' => $statusCode,
@@ -1221,7 +1243,7 @@ function EnvOpt($needUpdate = 0)
     $html .= '
 <a href="' . $preurl . '">' . getconstStr('Back') . '</a><br>
 ';
-    if (isset($_GET['frame'])&&$_GET['frame']=='platform') {
+    if ($_GET['setup']==='platform') {
         $frame .= '
 <table border=1 width=100%>
     <form name="common" action="" method="post">';
@@ -1274,8 +1296,8 @@ function EnvOpt($needUpdate = 0)
         <tr><td><input type="submit" name="submit1" value="' . getconstStr('Setup') . '"></td><td></td></tr>
     </form>
 </table><br>';
-    } elseif (isset($_GET['frame'])&&in_array($_GET['frame'], $disktags)) {
-        $disktag = $_GET['frame'];
+    } elseif (isset($_GET['disktag'])&&in_array($_GET['disktag'], $disktags)) {
+        $disktag = $_GET['disktag'];
         $disk_tmp = null;
         $diskok = driveisfine($disktag, $disk_tmp);
         $frame .= '
@@ -1289,6 +1311,22 @@ function EnvOpt($needUpdate = 0)
             </form>
         </td>
     </tr>
+</table><br>
+<table>
+<tr>
+    <td>
+        <form action="" method="post" style="margin: 0" onsubmit="return deldiskconfirm(this);">
+            <input type="hidden" name="disktag_del" value="' . $disktag . '">
+            <input type="submit" name="submit1" value="' . getconstStr('DelDisk') . '">
+        </form>
+    </td>
+    <td>
+        <form action="" method="post" style="margin: 0" onsubmit="return cpdiskconfirm(this);">
+            <input type="hidden" name="disktag_copy" value="' . $disktag . '">
+            <input type="submit" name="submit1" value="' . getconstStr('CopyDisk') . '">
+        </form>
+    </td>
+</tr>
 </table>
 <table border=1 width=100%>
     <tr>
@@ -1309,7 +1347,7 @@ function EnvOpt($needUpdate = 0)
         <td>' . getConfig($ext_env, $disktag) . '</td>
     </tr>';
             }
-            
+
             $frame .= '
 <form name="' . $disktag . '" action="" method="post">
     <input type="hidden" name="disk" value="' . $disktag . '">';
@@ -1330,23 +1368,8 @@ function EnvOpt($needUpdate = 0)
 </tr>';
         }
         $frame .= '
-</table><br>
-<table>
-<tr>
-    <td>
-        <form action="" method="post" style="margin: 0" onsubmit="return deldiskconfirm(this);">
-            <input type="hidden" name="disktag_del" value="' . $disktag . '">
-            <input type="submit" name="submit1" value="' . getconstStr('DelDisk') . '">
-        </form>
-    </td>
-    <td>
-        <form action="" method="post" style="margin: 0" onsubmit="return cpdiskconfirm(this);">
-            <input type="hidden" name="disktag_copy" value="' . $disktag . '">
-            <input type="submit" name="submit1" value="' . getconstStr('CopyDisk') . '">
-        </form>
-    </td>
-</tr>
 </table>
+
 <script>
     function deldiskconfirm(t) {
         var msg="' . getconstStr('Delete') . ' ??";
@@ -1381,27 +1404,8 @@ function EnvOpt($needUpdate = 0)
     }
 </script>';
     } else {
-        $_GET['frame'] = 'home';
+        //$_GET['disktag'] = '';
         $Driver_arr = scandir(__DIR__ . $slash . 'disk');
-        $frame .= '
-<select name="DriveType" onchange="changedrivetype(this.options[this.options.selectedIndex].value)">';
-        foreach ($Driver_arr as $v1) {
-            if ($v1!='.' && $v1!='..') {
-                //$v1 = substr($v1, 0, -4);
-                $v1 = splitlast($v1, '.php')[0];
-                $frame .= '
-    <option value="' . $v1 . '"' . ($v1=='Onedrive'?' selected="selected"':'') . '>' . $v1 . '</option>';
-            }
-        }
-        $frame .= '
-</select>
-<a id="AddDisk_link" href="?AddDisk=Onedrive">' . getconstStr('AddDisk') . '</a>
-<script>
-    function changedrivetype(d) {
-        document.getElementById(\'AddDisk_link\').href="?AddDisk=" + d;
-    }
-</script>
-<br><br>';
         if (count($disktags)>1) {
             $frame .= '
 <script src="https://cdn.jsdelivr.net/gh/SortableJS/Sortable@master/Sortable.js"></script>
@@ -1477,6 +1481,24 @@ function EnvOpt($needUpdate = 0)
     });
 </script><br>';
         }
+        $frame .= '
+<select name="DriveType" onchange="changedrivetype(this.options[this.options.selectedIndex].value)">';
+        foreach ($Driver_arr as $v1) {
+            if ($v1!='.' && $v1!='..') {
+                //$v1 = substr($v1, 0, -4);
+                $v2 = splitlast($v1, '.php')[0];
+                if ($v2 . '.php'==$v1) $frame .= '
+    <option value="' . $v2 . '"' . ($v2=='Onedrive'?' selected="selected"':'') . '>' . $v2 . '</option>';
+            }
+        }
+        $frame .= '
+</select>
+<a id="AddDisk_link" href="?AddDisk=Onedrive">' . getconstStr('AddDisk') . '</a><br><br>
+<script>
+    function changedrivetype(d) {
+        document.getElementById(\'AddDisk_link\').href="?AddDisk=" + d;
+    }
+</script>';
 
         $canOneKeyUpate = 0;
         if (isset($_SERVER['USER'])&&$_SERVER['USER']==='qcloud') {
@@ -1579,12 +1601,18 @@ function EnvOpt($needUpdate = 0)
         <button name="config_b" value="import" onclick="importConfig(this);">import</button></td>
     </tr>
     </form>
-</table>
+</table><br>
 <script>
     var config_f = document.getElementById("config_f");
     function exportConfig(b) {
         if (config_f.pass.value=="") {
             alert("admin pass");
+            return false;
+        }
+        try {
+            sha1(1);
+        } catch {
+            alert("sha1.js not loaded.");
             return false;
         }
         var timestamp = new Date().getTime();
@@ -1624,6 +1652,12 @@ function EnvOpt($needUpdate = 0)
                 return false;
             }
         }
+        try {
+            sha1(1);
+        } catch {
+            alert("sha1.js not loaded.");
+            return false;
+        }
         var timestamp = new Date().getTime();
         var xhr = new XMLHttpRequest();
         xhr.open("POST", "");
@@ -1655,12 +1689,18 @@ function EnvOpt($needUpdate = 0)
             alert("Input twice new password");
             return false;
         }
+        try {
+            sha1(1);
+        } catch {
+            alert("sha1.js not loaded.");
+            return false;
+        }
         var timestamp = new Date().getTime();
         f.timestamp.value = timestamp;
         f.oldPass.value = sha1(f.oldPass.value + "" + timestamp);
         return true;
     }
-</script><br>';
+</script>';
     }
     $html .= '
 <style type="text/css">
@@ -1668,20 +1708,22 @@ function EnvOpt($needUpdate = 0)
 </style>
 <table border=0>
     <tr class="tabs">';
-    if ($_GET['frame']=='home') $html .= '
-    <td>' . getconstStr('Home') . '</td>';
-    else $html .= '
-    <td><a href="?setup&frame=home">' . getconstStr('Home') . '</a></td>';
-    if ($_GET['frame']=='platform') $html .= '
-    <td>' . getconstStr('PlatformConfig') . '</td>';
-    else $html .= '
-    <td><a href="?setup&frame=platform">' . getconstStr('PlatformConfig') . '</a></td>';
+    if ($_GET['disktag']=='') {
+        if ($_GET['setup']==='platform') $html .= '
+        <td><a href="?setup">' . getconstStr('Home') . '</a></td>
+        <td>' . getconstStr('PlatformConfig') . '</td>';
+        else $html .= '
+        <td>' . getconstStr('Home') . '</td>
+        <td><a href="?setup=platform">' . getconstStr('PlatformConfig') . '</a></td>';
+    } else $html .= '
+        <td><a href="?setup">' . getconstStr('Home') . '</a></td>
+        <td><a href="?setup=platform">' . getconstStr('PlatformConfig') . '</a></td>';
     foreach ($disktags as $disktag) {
         if ($disktag!='') {
-            if ($_GET['frame']==$disktag) $html .= '
-            <td>' . $disktag . '</td>';
+            if ($_GET['disktag']==$disktag) $html .= '
+        <td>' . $disktag . '</td>';
             else $html .= '
-            <td><a href="?setup&frame=' . $disktag . '">' . $disktag . '</a></td>';
+        <td><a href="?setup&disktag=' . $disktag . '">' . $disktag . '</a></td>';
         }
     }
     $html .= '
@@ -1772,7 +1814,7 @@ function render_list($path = '', $files = [])
         } else {
             if (!($html = getcache('customTheme'))) {
                 $file_path = $theme;
-                $tmp = curl('GET', $file_path, false, [], 1);
+                $tmp = curl('GET', $file_path, '', [], 1);
                 if ($tmp['stat']==302) {
                     error_log1(json_encode($tmp));
                     $tmp = curl('GET', $tmp["returnhead"]["Location"]);
@@ -2075,9 +2117,9 @@ function render_list($path = '', $files = [])
                 $html = str_replace('<!--IsFileStart-->', '', $html);
                 $html = str_replace('<!--IsFileEnd-->', '', $html);
             }
-            $html = str_replace('<!--FileEncodeUrl-->', str_replace('%2523', '%23', str_replace('%26amp%3B','&amp;',spurlencode(path_format($_SERVER['base_disk_path'] . '/' . $path), '/'))), $html);
-            $html = str_replace('<!--FileUrl-->', path_format($_SERVER['base_disk_path'] . '/' . $path), $html);
-            
+            $html = str_replace('<!--FileEncodeUrl-->', encode_str_replace(path_format($_SERVER['base_disk_path'] . '/' . str_replace('&amp;', '&', $path))), $html);
+            $html = str_replace('<!--FileUrl-->', encode_str_replace(path_format($_SERVER['base_disk_path'] . '/' . str_replace('&amp;', '&', $path))), $html);
+
             $ext = strtolower(substr($path, strrpos($path, '.') + 1));
             if (in_array($ext, $exts['img'])) $ext = 'img';
             elseif (in_array($ext, $exts['video'])) $ext = 'video';
@@ -2103,8 +2145,8 @@ function render_list($path = '', $files = [])
                 $html = str_replace('<!--Is'.$ext.'FileEnd-->', '', $html);
             }
             //while (strpos($html, '<!--FileDownUrl-->')) $html = str_replace('<!--FileDownUrl-->', $files['url'], $html);
-            while (strpos($html, '<!--FileDownUrl-->')) $html = str_replace('<!--FileDownUrl-->', path_format($_SERVER['base_disk_path'] . '/' . $path), $html);
-            while (strpos($html, '<!--FileEncodeReplaceUrl-->')) $html = str_replace('<!--FileEncodeReplaceUrl-->', path_format($_SERVER['base_disk_path'] . '/' . $path), $html);
+            while (strpos($html, '<!--FileDownUrl-->')) $html = str_replace('<!--FileDownUrl-->', encode_str_replace(path_format($_SERVER['base_disk_path'] . '/' . $path)), $html);
+            while (strpos($html, '<!--FileEncodeReplaceUrl-->')) $html = str_replace('<!--FileEncodeReplaceUrl-->', encode_str_replace(path_format($_SERVER['base_disk_path'] . '/' . $path)), $html);
             while (strpos($html, '<!--FileName-->')) $html = str_replace('<!--FileName-->', $files['name'], $html);
             while (strpos($html, '<!--FileEncodeDownUrl-->')) $html = str_replace('<!--FileEncodeDownUrl-->', urlencode($files['url']), $html);
             //while (strpos($html, '<!--FileEncodeDownUrl-->')) $html = str_replace('<!--FileEncodeDownUrl-->', urlencode(path_format($_SERVER['base_disk_path'] . '/' . $path)), $html);
@@ -2154,7 +2196,7 @@ function render_list($path = '', $files = [])
                 if ($file['type']=='folder') {
                     if ($_SERVER['admin'] or !isHideFile($file['name'])) {
                         $filenum++;
-                        $FolderListStr = str_replace('<!--FileEncodeReplaceUrl-->', path_format($_SERVER['base_disk_path'] . '/' . $path . '/' . encode_str_replace($file['name'])), $FolderList);
+                        $FolderListStr = str_replace('<!--FileEncodeReplaceUrl-->', encode_str_replace(path_format($_SERVER['base_disk_path'] . '/' . str_replace('&amp;', '&', $path) . '/' . $file['name'])), $FolderList);
                         $FolderListStr = str_replace('<!--FileId-->', $file['id'], $FolderListStr);
                         $FolderListStr = str_replace('<!--FileEncodeReplaceName-->', str_replace('&','&amp;', $file['showname']?$file['showname']:$file['name']), $FolderListStr);
                         $FolderListStr = str_replace('<!--lastModifiedDateTime-->', time_format($file['time']), $FolderListStr);
@@ -2176,7 +2218,7 @@ function render_list($path = '', $files = [])
                         $filenum++;
                         $ext = strtolower(substr($file['name'], strrpos($file['name'], '.') + 1));
                         $FolderListStr = $FolderList;
-                        while (strpos($FolderListStr, '<!--FileEncodeReplaceUrl-->')) $FolderListStr = str_replace('<!--FileEncodeReplaceUrl-->', path_format($_SERVER['base_disk_path'] . '/' . $path . '/' . encode_str_replace($file['name'])), $FolderListStr);
+                        while (strpos($FolderListStr, '<!--FileEncodeReplaceUrl-->')) $FolderListStr = str_replace('<!--FileEncodeReplaceUrl-->', encode_str_replace(path_format($_SERVER['base_disk_path'] . '/' . str_replace('&amp;', '&', $path) . '/' . $file['name'])), $FolderListStr);
                         $FolderListStr = str_replace('<!--FileExt-->', $ext, $FolderListStr);
                         if (in_array($ext, $exts['music'])) $FolderListStr = str_replace('<!--FileExtType-->', 'audio', $FolderListStr);
                         elseif (in_array($ext, $exts['video'])) $FolderListStr = str_replace('<!--FileExtType-->', 'iframe', $FolderListStr);
@@ -2361,8 +2403,8 @@ function render_list($path = '', $files = [])
                 $tmp1 = splitfirst($tmp_path, '/');
                 $folder1 = $tmp1[0];
                 if ($folder1!='') {
-                    $tmp_url .= $folder1 . '/';
-                    $PathArrayStr1 = str_replace('<!--PathArrayLink-->', ($folder1==$files['name']?'':$tmp_url), $PathArrayStr);
+                    $tmp_url .= str_replace('&amp;', '&', $folder1) . '/';
+                    $PathArrayStr1 = str_replace('<!--PathArrayLink-->', encode_str_replace($folder1==$files['name']?'':$tmp_url), $PathArrayStr);
                     $PathArrayStr1 = str_replace('<!--PathArrayName-->', $folder1, $PathArrayStr1);
                     $html .= $PathArrayStr1;
                 }
@@ -2382,8 +2424,8 @@ function render_list($path = '', $files = [])
                 $tmp1 = splitfirst($tmp_path, '/');
                 $folder1 = $tmp1[0];
                 if ($folder1!='') {
-                    $tmp_url .= $folder1 . '/';
-                    $PathArrayStr1 = str_replace('<!--PathArrayLink-->', ($folder1==$files['name']?'':$tmp_url), $PathArrayStr);
+                    $tmp_url .= str_replace('&amp;', '&', $folder1) . '/';
+                    $PathArrayStr1 = str_replace('<!--PathArrayLink-->', encode_str_replace($folder1==$files['name']?'':$tmp_url), $PathArrayStr);
                     $PathArrayStr1 = str_replace('<!--PathArrayName-->', ($folder1==$_SERVER['disktag']?(getConfig('diskname')==''?$_SERVER['disktag']:getConfig('diskname')):$folder1), $PathArrayStr1);
                     $html .= $PathArrayStr1;
                 }
