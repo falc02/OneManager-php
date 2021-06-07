@@ -52,7 +52,7 @@ class Onedrive {
             $pos = splitlast($path, '/');
             $parentpath = $pos[0];
             if ($parentpath=='') $parentpath = '/';
-            $filename = $pos[1];
+            $filename = strtolower($pos[1]);
             if ($parentfiles = getcache('path_' . $parentpath, $this->disktag)) {
                 if (isset($parentfiles['children'][$filename][$this->DownurlStrName])) {
                     if (in_array(splitlast($filename,'.')[1], $exts['txt'])) {
@@ -93,18 +93,30 @@ class Onedrive {
                         }
                     } else {
                     // files num < 200 , then cache
-                        //if (isset($files['children'])) {
-                            //$files['children'] = children_name($files['children']);
-                        //}
+                        if (isset($files['children'])) {
+                            $files['children'] = children_name($files['children']);
+                        }
                         savecache('path_' . $path, $files, $this->disktag);
                     }
                 }
                 if (isset($files['file'])) {
-                    if (in_array(splitlast($files['name'],'.')[1], $exts['txt'])) {
-                        if (!(isset($files['content'])&&$files['content']['stat']==200)) {
-                            $content1 = curl('GET', $files[$this->DownurlStrName]);
-                            $files['content'] = $content1;
-                            savecache('path_' . $path, $files, $this->disktag);
+                    if (in_array(strtolower(splitlast($files['name'],'.')[1]), $exts['txt'])) {
+                        if ($files['size']<1024*1024) {
+                            if (!(isset($files['content'])&&$files['content']['stat']==200)) {
+                                $content1 = curl('GET', $files[$this->DownurlStrName]);
+                                $tmp = null;
+                                $tmp = json_decode(json_encode($content1), true);
+                                if ($tmp['body']===null) {
+                                    $tmp['body'] = iconv("GBK", 'UTF-8//TRANSLIT', $content1['body']);
+                                    $tmp = json_decode(json_encode($tmp), true);
+                                    if ($tmp['body']!==null) $content1['body'] = $tmp['body'];
+                                }
+                                $files['content'] = $content1;
+                                savecache('path_' . $path, $files, $this->disktag);
+                            }
+                        } else {
+                            $files['content']['stat'] = 202;
+                            $files['content']['body'] = 'File too large.';
                         }
                     }
                 }
@@ -885,9 +897,9 @@ class Onedrive {
         }
         if ($fileinfo['size']>10*1024*1024) {
             $cachefilename = spurlencode( $fileinfo['path'] . '/.' . $fileinfo['filelastModified'] . '_' . $fileinfo['size'] . '_' . $fileinfo['name'] . '.tmp', '/');
-            $getoldupinfo=$this->list_files(path_format($path . '/' . $cachefilename));
-            //echo json_encode($getoldupinfo, JSON_PRETTY_PRINT);
-            if (isset($getoldupinfo['file'])&&$getoldupinfo['size']<5120) {
+            $getoldupinfo = $this->list_files(path_format($path . '/' . $cachefilename));
+            //error_log1(json_encode($getoldupinfo, JSON_PRETTY_PRINT));
+            if (isset($getoldupinfo['url'])&&$getoldupinfo['size']<5120) {
                 $getoldupinfo_j = curl('GET', $getoldupinfo['url']);
                 $getoldupinfo = json_decode($getoldupinfo_j['body'], true);
                 if ( json_decode( curl('GET', $getoldupinfo['uploadUrl'])['body'], true)['@odata.context']!='' ) return output($getoldupinfo_j['body'], $getoldupinfo_j['stat']);
@@ -998,10 +1010,10 @@ class Onedrive {
             }
         }
         curl_close($ch);
-        error_log1($response['stat'].'
+        /*error_log1($response['stat'].'
     '.$response['body'].'
     '.$url.'
-    ');
+    ');*/
         return $response;
     }
 
