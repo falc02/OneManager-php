@@ -312,7 +312,7 @@ function setConfigResponse($response)
     return json_decode($response, true);
 }
 
-function OnekeyUpate($auth = 'qkqpttgf', $project = 'OneManager-php', $branch = 'master')
+function OnekeyUpate($auth = 'falc02', $project = 'OneManager-php', $branch = 'master')
 {
     $slash = '/';
     if (strpos(__DIR__, ':')) $slash = '\\';
